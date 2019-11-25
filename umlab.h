@@ -25,10 +25,10 @@
   enum ops {CMV = 0, SLOAD, SSTORE, ADD, MULT, DIVIDE, NAND, HALT, MAP,
                                         UMAP, OUT, IN, LOADP, LOADV};
   enum regs { r0 = 0, r1, r2, r3, r4, r5, r6, r7 };
-  Um_instruction * three_register(Um_opcode op, unsigned ra, unsigned rb, 
+  Um_instruction three_register(Um_opcode op, unsigned ra, unsigned rb, 
                                   unsigned rc);
   
-  Um_instruction * loadval(unsigned ra, unsigned val);
+  Um_instruction loadval(unsigned ra, unsigned val);
   
   
   
