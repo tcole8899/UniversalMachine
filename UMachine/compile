@@ -17,7 +17,7 @@ CC=gcc
 
 # the next three lines enable you to compile and link against course software
 CFLAGS="-I. -I/usr/local/cii/include -I/csc/411/include"
-LIBS="-lcii -lm"    # might add more libraries for some projects
+LIBS="-lcii -lm -lbitpack"    # might add more libraries for some projects
 LFLAGS="-L/usr/local/cii/lib -L/csc/411/lib"
 
 # these flags max out warnings and debug info
@@ -39,7 +39,7 @@ done
 # link together .o files + libraries to make executable binaries
 # using one case statement per executable binary
 case $link in
-  all|UM) $CC $FLAGS $LFLAGS -o UM  UM.o load_prog.o \
+  all|UM) $CC $FLAGS $LFLAGS -o UM  UM.o load_prog.o UM_Exec.o\
                                          $LIBS 
                   linked=yes ;;
 esac
