@@ -6,9 +6,9 @@ void load_prog(FILE *UMprog){
     while( !feof(UMprog) )
     {
         command = 0;
-        command |= getc(UMprog) << 24;
-        command |= getc(UMprog) << 16;
-        command |= getc(UMprog) << 8;
+        command |= getc(UMprog) << 24;               //
+        command |= getc(UMprog) << 16;               // Pack command in Big-endian byte order
+        command |= getc(UMprog) << 8;                //
         command |= getc(UMprog);
         Seq_addhi(prog, (void *)(uintptr_t)command);
     }
