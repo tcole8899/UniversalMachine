@@ -5,8 +5,11 @@ void load_prog(FILE *UMprog){
     uint32_t command;
     while( !feof(UMprog) )
     {
-        int size = fread(&command, 4, 1, UMprog);
-        if( !size ) break;
+        command = 0;
+        command |= getc(UMprog) << 24;
+        command |= getc(UMprog) << 16;
+        command |= getc(UMprog) << 8;
+        command |= getc(UMprog);
         Seq_addhi(prog, (void *)(uintptr_t)command);
     }
 
