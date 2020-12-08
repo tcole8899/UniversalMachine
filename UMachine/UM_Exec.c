@@ -24,16 +24,16 @@ void execute_prog(Seq_T program){
     uint32_t *r;
     r = (uint32_t *)calloc(8, sizeof(uint32_t)); //8 general purpose registers
     for(int i = 0; i < 8; i++) { r[i] = 0; }
-    Seq_T m = Seq_new(0);                        //Segmented mapped memory
-    Seq_addhi(m, (void *)program); 
+    Seq_T *m = calloc(1, sizeof(Seq_T));                        //Segmented mapped memory
+    m[0] = program; 
+    uint32_t numSegments = 1;
     Seq_T um = Seq_new(0);                       //Unmapped memory address'
     address ct = 0;                              //Program counter
-
+    
     //Execute program
     while( TRUE )
     {
-        Seq_T prog = Seq_get(m, 0);
-        word cmd = (word)(uintptr_t)Seq_get(prog, ct++);
+        word cmd = (word)(uintptr_t)Seq_get(m[0], ct++);
         unsigned opcode = unpack_value(cmd, OP);
         unsigned ra = unpack_value(cmd, A);
         unsigned rb = unpack_value(cmd, B);
@@ -44,12 +44,12 @@ void execute_prog(Seq_T program){
             break;
 
         case SLOAD:                          //loads m[r[rb]][r[rc]] into r[ra]
-            r[ra] = (uint32_t)(uintptr_t)Seq_get((Seq_T)Seq_get(m, r[rb]), r[rc]); 
+            r[ra] = (uint32_t)(uintptr_t)Seq_get(m[r[rb]], r[rc]); 
             break;
 
         case SSTORE:
             Seq_put(
-                (Seq_T)Seq_get(m, r[ra]),    //Segment identified by register A
+                m[r[ra]],    //Segment identified by register A
                 r[rb],                       //Location in segment 
                 (void *)(uintptr_t)r[rc]);   //Value to store
             break;
@@ -83,31 +83,30 @@ void execute_prog(Seq_T program){
             Seq_T seg = Seq_new(0);
             init_seg(seg, r[rc]);            //Initialize segment with r[rc] elements set to 0
             if ( Seq_length(um) == 0 ) {    
-                r[rb] = (uint32_t) Seq_length(m);
-                Seq_addhi(m, seg);     
+                r[rb] = numSegments;
+                m = realloc(m, sizeof(Seq_T)*(r[rb]+1));
+                m[r[rb]] = seg;
+                numSegments++;     
             }
             else {
                 address adr = (address)(uintptr_t)Seq_remlo(um);
                 r[rb] = adr;
-                Seq_put(m, adr, seg);
+                m[adr] = seg;
             }
             break;
 
         case UMSEG: ;
-            Seq_T useg = (Seq_T)Seq_get(m, r[rc]);
-            Seq_free( &useg );
+            Seq_free( &m[r[rc]] );
             address uadr = r[rc];
             Seq_addlo(um, (void *)(uintptr_t)uadr);
             break;
 
         case LPROG: ;
             if (r[rb] != 0) {
-                Seq_T progSeg = (Seq_T)Seq_get(m, 0);
-                Seq_free( &progSeg );        // Free current program
-                Seq_T dupSeg = Seq_get(m, r[rb]);
+                Seq_free( &m[0] );        // Free current program
                 Seq_T newSeg = Seq_new(0);
-                dup_seg(newSeg, dupSeg);     // Duplicate program at m[r[rb]]
-                Seq_remlo(m); Seq_addlo(m, newSeg);
+                dup_seg(newSeg, m[r[rb]]);     // Duplicate program at m[r[rb]]
+                m[0] = newSeg;
             }
             ct = r[rc];
             break;
