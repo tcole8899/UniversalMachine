@@ -1,16 +1,4 @@
 #include "./UM_Exec.h"
-static inline void init_seg(Seq_T segment, uint32_t size){
-    for(uint32_t i = 0; i < size; i++){
-        Seq_addhi(segment, (void *)(uintptr_t)(uint32_t)0);
-    }
-}
-
-static inline void dup_seg(Seq_T progSegment, Seq_T dupSegment){
-    unsigned length = Seq_length(dupSegment);
-    for(unsigned i = 0; i < length; i++){
-        Seq_addhi(progSegment, Seq_get(dupSegment, i));
-    }
-}
 
 static inline unsigned unpack_value(word op, unsigned reg){
     unsigned width = (reg == OP) ? 4 : 3;        //opcodes are 4 bits reg identifiers are 3
@@ -19,21 +7,19 @@ static inline unsigned unpack_value(word op, unsigned reg){
     return (unsigned)( (op<<shiftL)>>shiftR );
 }
 
-void execute_prog(Seq_T program){
+void execute_prog(uint32_t* program){
     //Initialize machine
-    uint32_t *r;
-    r = (uint32_t *)calloc(8, sizeof(uint32_t)); //8 general purpose registers
-    for(int i = 0; i < 8; i++) { r[i] = 0; }
-    Seq_T *m = calloc(1, sizeof(Seq_T));                        //Segmented mapped memory
-    m[0] = program; 
-    uint32_t numSegments = 1;
-    Seq_T um = Seq_new(0);                       //Unmapped memory address'
-    address ct = 0;                              //Program counter
+    uint32_t *r = (uint32_t *)calloc(8, sizeof(uint32_t));    // 8 general purpose registers
+    uint32_t **m = (uint32_t **)calloc(1, sizeof(uint32_t*)); // Segmented mapped memory
+    m[0] = program;                              // Program segment
+    uint32_t numSegments = 1;                    // Size of segment array   
+    Seq_T um = Seq_new(0);                       // Unmapped memory address'
+    address ct = 0;                              // Program counter
     
     //Execute program
     while( TRUE )
     {
-        word cmd = (word)(uintptr_t)Seq_get(m[0], ct++);
+        word cmd = m[0][ct++];
         unsigned opcode = unpack_value(cmd, OP);
         unsigned ra = unpack_value(cmd, A);
         unsigned rb = unpack_value(cmd, B);
@@ -42,18 +28,10 @@ void execute_prog(Seq_T program){
         switch (opcode) {
         case CMOV: r[ra] = (r[rc] != 0) ? r[rb] : r[ra];
             break;
-
-        case SLOAD:                          //loads m[r[rb]][r[rc]] into r[ra]
-            r[ra] = (uint32_t)(uintptr_t)Seq_get(m[r[rb]], r[rc]); 
+        case SLOAD: r[ra] = m[r[rb]][r[rc]];   
             break;
-
-        case SSTORE:
-            Seq_put(
-                m[r[ra]],    //Segment identified by register A
-                r[rb],                       //Location in segment 
-                (void *)(uintptr_t)r[rc]);   //Value to store
+        case SSTORE: m[r[ra]][r[rb]] = r[rc]; 
             break;
-
         case  ADD: r[ra] = (r[rb] + r[rc]);
             break;
         case MULT: r[ra] = (r[rb] * r[rc]);
@@ -62,7 +40,6 @@ void execute_prog(Seq_T program){
             break;
         case NAND: r[ra] = ~(r[rb] & r[rc]);
             break;
-
         case HALT: exit(0);
 
         case OUT:
@@ -80,33 +57,30 @@ void execute_prog(Seq_T program){
             break;
         
         case MSEG: ;
-            Seq_T seg = Seq_new(0);
-            init_seg(seg, r[rc]);            //Initialize segment with r[rc] elements set to 0
+            uint32_t *segment = calloc(r[rc], sizeof(uint32_t));
             if ( Seq_length(um) == 0 ) {    
                 r[rb] = numSegments;
-                m = realloc(m, sizeof(Seq_T)*(r[rb]+1));
-                m[r[rb]] = seg;
+                m = realloc(m, sizeof(uint32_t*)*(r[rb]+1));
+                m[r[rb]] = segment;
                 numSegments++;     
             }
             else {
                 address adr = (address)(uintptr_t)Seq_remlo(um);
                 r[rb] = adr;
-                m[adr] = seg;
+                m[adr] = segment;
             }
             break;
 
         case UMSEG: ;
-            Seq_free( &m[r[rc]] );
+            free( m[r[rc]] );
             address uadr = r[rc];
             Seq_addlo(um, (void *)(uintptr_t)uadr);
             break;
 
         case LPROG: ;
             if (r[rb] != 0) {
-                Seq_free( &m[0] );        // Free current program
-                Seq_T newSeg = Seq_new(0);
-                dup_seg(newSeg, m[r[rb]]);     // Duplicate program at m[r[rb]]
-                m[0] = newSeg;
+                free( m[0] );        // Free current program
+                m[0] = m[r[rb]];
             }
             ct = r[rc];
             break;

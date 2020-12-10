@@ -17,6 +17,6 @@ enum TF {FALSE=0, TRUE};
 enum opcode { CMOV=0, SLOAD, SSTORE, ADD, MULT, DIV, NAND,  //operation code values
               HALT, MSEG, UMSEG, OUT, IN, LPROG, LVAL};
 
-void execute_prog(Seq_T program);                           //Initializes machine then executes program
+void execute_prog(uint32_t* program);                           //Initializes machine then executes program
 
 #endif
