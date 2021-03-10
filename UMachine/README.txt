@@ -1,20 +1,13 @@
-I worked on this project myself. I spent about 2 hours analyzing the problem, 6 hours making the design, and about 15 hours
-implementing and testing my solution. I used Hanson's documentation on the sequence library, and a binary <-> decimal calculator as references.
-
-This implementation takes 1.88 seconds for 50,000,000 instructions. To find this I used \time with midmark.um, which has 
-85,070,522 commands, and got a result of 3.2 seconds.
-    - (50,000,000/85,070,522) * 3.2 = 1.88 seconds.
-
 Segment Representation and Invariants
-    - The segmented memory is represented as a sequence, 'm', of sequences.
+    - The segmented memory is represented as an array, 'm', of arrays.
     - A seperate sequence, 'um', is provided for unmapped segment IDs.
         - A segment is accessed with a Seq_get(<segment sequence>, <32-bit ID>).
             - A memory address within a segment is accessed with Seq_get(<value sequence>, <32-bit ID>).
-    - Seq_length(m) == 1 + (<number of calls to map segment> - <number of calls to unmap segment>).
-    - Hanson's seqence library helps in converting between 32-bit IDs and 64-bit pointers.
-        - Memory segment 'i' = Seq_get(m, i).
-        - Element 'i, j' = Seq_get( Seq_get(m, i), j )
-        ** i < 0xFFFFFFFF && j < 0xFFFFFFFF && i < Seq_length(m) && j < Seq_length( Seq_get(m, i) ) ** 
+    - length(m) == 1 + (<number of calls to map segment> - <number of calls to unmap segment>).
+    - Since this is a virtual 32-bit machine the maximum number of segments and the maximum segment size is 2,147,483,647.
+        - Memory segment 'i' = m[i]
+        - Element 'i, j' = m[i][j]
+        ** i < 0xFFFFFFFF && j < 0xFFFFFFFF && i < lenght(m) && j < length( m[i] ) ** 
  
 UM Architecture
     um
